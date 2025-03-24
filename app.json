@@ -9,13 +9,18 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gaideh.smileidexample",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to verify your identity using Smile ID."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.gaideh.smileidexample"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +36,27 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "./plugins/copy-file-config",
+        {
+          "src": "./config/smile_config.json",
+          "iosDest": "smile_config.json",
+          "androidDest": "app/src/main/assets/smile_config.json",
+          "groupName": "<ios group name here>"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "34.0.0",
+            "kotlinVersion": "2.1.10"
+          }
         }
       ]
     ],
