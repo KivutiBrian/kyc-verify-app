@@ -3,6 +3,13 @@
 # dependencies
 node_modules/
 
+# smile id config file
+plugins/config/smile_config.json
+
+# ignore android and ios generated from expo prebuild
+android
+ios
+
 # Expo
 .expo/
 dist/

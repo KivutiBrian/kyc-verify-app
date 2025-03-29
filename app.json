@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.gaideh.smileid"
     },
     "web": {
       "bundler": "metro",
@@ -32,7 +33,17 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      [
+        "./plugins/copy-file-config",
+        {
+          "src": "./config/smile_config.json",
+          "iosDest": "smile_config.json",
+          "androidDest": "app/src/main/assets/smile_config.json",
+          "groupName": "<ios group name here>"
+        }
+      ],
+      ["./plugins/withKotlinCompilerArgs"]
     ],
     "experiments": {
       "typedRoutes": true
