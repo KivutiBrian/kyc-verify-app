@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Platform, Image, Dimensions } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { Camera as CameraIcon, Camera as FlipCamera, X, Check, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera as CameraIcon, X, Check, ArrowLeft } from 'lucide-react-native';
 import { useVerification } from '@/context/VerificationContext';
 import Animated, {
     useAnimatedStyle,
@@ -11,38 +11,27 @@ import Animated, {
     withTiming,
     useSharedValue
 } from 'react-native-reanimated';
-import { useImageManipulator, ImageManipulator } from 'expo-image-manipulator';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const FRAME_WIDTH = 2500;
-const FRAME_HEIGHT = 500;
-const FRAME_PADDING = 40;
+const window = Dimensions.get('window');
+const SCREEN_WIDTH = window.width;
+const SCREEN_HEIGHT = window.height;
+const FRAME_SIZE = Math.min(window.width, window.height) * 0.9;
+const FRAME_PADDING = 20;
 
-// Calculate frame position relative to screen
-const FRAME_X = (SCREEN_WIDTH - FRAME_WIDTH) / 2;
-const FRAME_Y = (SCREEN_HEIGHT - FRAME_HEIGHT) / 2;
+const FRAME_X = (SCREEN_WIDTH - FRAME_SIZE) / 2;
+const FRAME_Y = (SCREEN_HEIGHT - FRAME_SIZE) / 2;
 
-export default function CameraScreen() {
-    const { side } = useLocalSearchParams<{ side: 'front' | 'back' }>();
+export default function SelfieScreen() {
     const { dispatch } = useVerification();
-    const [facing, setFacing] = useState<CameraType>('back');
-    const [uri, setUri] = useState<string | null>(null);
-    const [b64, setB64] = useState<string | any>('');
-    const [permission, requestPermission] = Platform.OS === 'web'
-        ? [{ granted: true }, async () => ({ status: 'granted' })] as const
-        : useCameraPermissions();
+    const [photo, setPhoto] = useState<string | null>(null);
+    const [photoBase64, setPhotoBase64] = useState<string | null>(null)
+    const [permission, requestPermission] = useCameraPermissions();
     const cameraRef = useRef<CameraView>(null);
 
-
-    const context = useImageManipulator(uri || '')
-
-    // Animation values
     const borderWidth = useSharedValue(2);
     const borderOpacity = useSharedValue(1);
 
     useEffect(() => {
-        // Start the animation when component mounts
         borderWidth.value = withRepeat(
             withSequence(
                 withTiming(4, { duration: 1000 }),
@@ -67,63 +56,24 @@ export default function CameraScreen() {
         opacity: borderOpacity.value,
     }));
 
-
-    useEffect(() => {
-        if (!permission?.granted) {
-            requestPermission();
-        }
-    }, [permission]);
-
     const handleCapture = async () => {
+        if (!cameraRef.current) return;
 
         try {
-            const photo = await cameraRef.current?.takePictureAsync({
+            const photo = await cameraRef.current.takePictureAsync({
                 quality: 1,
                 base64: true,
+                exif: false,
                 shutterSound: false
             });
 
 
-            if (photo?.uri || photo?.base64) {
-                // Calculate the scale factor between the screen and the captured image
-                const screenRatio = SCREEN_HEIGHT / SCREEN_WIDTH;
-                const photoRatio = photo.height / photo.width;
+            if (photo?.uri) {
+                setPhoto(photo.uri);
+                setPhotoBase64(photo?.base64 ?? '');
 
-                let scaledWidth, scaledHeight, offsetY = 0;
-
-                if (photoRatio > screenRatio) {
-                    // Image is taller than screen ratio
-                    scaledWidth = photo.width;
-                    scaledHeight = photo.width * screenRatio;
-                    offsetY = (photo.height - scaledHeight) / 2;
-                } else {
-                    // Image is wider than screen ratio
-                    scaledHeight = photo.height;
-                    scaledWidth = photo.height / screenRatio;
-                }
-
-                // Calculate crop dimensions based on the scaled image
-                const scale = scaledWidth / SCREEN_WIDTH;
-                const cropX = Math.max(0, FRAME_X * scale);
-                const cropY = Math.max(0, (FRAME_Y * scale) + offsetY);
-                const cropWidth = Math.min(photo.width, FRAME_WIDTH * scale);
-                const cropHeight = Math.min(photo.height - cropY, FRAME_HEIGHT * scale);
-
-
-                const a = ImageManipulator.manipulate(photo.uri)
-                a.crop({
-                    height: cropHeight,
-                    originX: cropX,
-                    originY: cropY,
-                    width: cropWidth
-                })
-
-                const image = await a.renderAsync()
-                const result = await image.saveAsync()
-
-                setUri(result.uri)
-                setB64(result.base64)
             }
+
 
         } catch (error) {
             console.error('Failed to take photo:', error);
@@ -131,33 +81,18 @@ export default function CameraScreen() {
     };
 
     const handleConfirm = () => {
-        if (!uri) return;
+        if (!photo) return;
 
-        dispatch({
-            type: side === 'front' ? 'SET_FRONT_IMAGE' : 'SET_BACK_IMAGE',
-            payload: uri
-        });
-
-        // set the base64
-        dispatch({
-            type: side === 'front' ? 'SET_FRONT_BASE64' : 'SET_BACK_BASE64',
-            payload: b64
-        });
-
-
-        if (side === 'front') {
-            router.push('/instructions?side=back');
-        } else {
-            router.push('/selfie-instructions');
-        }
+        dispatch({ type: 'SET_SELFIE_IMAGE', payload: photo });
+        dispatch({ type: 'SET_SELFIE_BASE64', payload: photoBase64 });
+        router.push('/review');
     };
-
 
     if (!permission?.granted) {
         return (
             <View style={styles.container}>
                 <Text style={styles.text}>We need your permission to show the camera</Text>
-                <TouchableOpacity style={styles.button} onPress={() => requestPermission()}>
+                <TouchableOpacity style={styles.button} onPress={requestPermission}>
                     <Text style={styles.buttonText}>Grant Permission</Text>
                 </TouchableOpacity>
             </View>
@@ -175,27 +110,27 @@ export default function CameraScreen() {
         );
     }
 
-    if (uri) {
+    if (photo) {
         return (
             <View style={styles.container}>
                 <View style={styles.header}>
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => setUri(null)}
+                        onPress={() => setPhoto(null)}
                     >
                         <ArrowLeft color="#fff" size={24} />
                         <Text style={styles.backButtonText}>Retake</Text>
                     </TouchableOpacity>
                 </View>
 
-                <Image source={{ uri: uri }} style={styles.preview} />
+                <Image source={{ uri: photo }} style={styles.preview} />
 
                 <TouchableOpacity
                     style={styles.confirmButton}
                     onPress={handleConfirm}
                 >
                     <Check color="#fff" size={24} />
-                    <Text style={styles.confirmButtonText}>Confirm {side === 'front' ? 'Front' : 'Back'}</Text>
+                    <Text style={styles.confirmButtonText}>Confirm Selfie</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -205,10 +140,8 @@ export default function CameraScreen() {
         <View style={styles.container}>
             <CameraView
                 ref={cameraRef}
-                facing={facing}
                 style={styles.camera}
-                mode='picture'
-                responsiveOrientationWhenOrientationLocked
+                facing='front'
 
             >
                 <View style={styles.overlay}>
@@ -228,7 +161,7 @@ export default function CameraScreen() {
                         <View style={styles.cornerBL} />
                         <View style={styles.cornerBR} />
                         <Text style={styles.guideText}>
-                            Position the {side} of your ID within the frame
+                            Position your face within the circle
                         </Text>
                     </View>
 
@@ -236,6 +169,7 @@ export default function CameraScreen() {
                         <TouchableOpacity
                             style={styles.captureButton}
                             onPress={handleCapture}
+                            activeOpacity={0.7}
                         >
                             <CameraIcon color="#fff" size={32} />
                         </TouchableOpacity>
@@ -272,30 +206,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    flipButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     guide: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     guideBorder: {
-        width: 280,
-        height: 180,
-        borderWidth: 2,
+        width: FRAME_SIZE,
+        height: FRAME_SIZE,
         borderColor: '#fff',
-        borderRadius: 12,
+        borderRadius: FRAME_SIZE / 2,
+        position: 'relative',
     },
     cornerTL: {
         position: 'absolute',
-        top: (Dimensions.get('window').height - FRAME_HEIGHT) / 2 - FRAME_PADDING,
-        left: (SCREEN_WIDTH - FRAME_WIDTH) / 2 - FRAME_PADDING,
+        top: FRAME_Y - FRAME_PADDING,
+        left: FRAME_X - FRAME_PADDING,
         width: 20,
         height: 20,
         borderTopWidth: 3,
@@ -304,8 +230,8 @@ const styles = StyleSheet.create({
     },
     cornerTR: {
         position: 'absolute',
-        top: (Dimensions.get('window').height - FRAME_HEIGHT) / 2 - FRAME_PADDING,
-        right: (SCREEN_WIDTH - FRAME_WIDTH) / 2 - FRAME_PADDING,
+        top: FRAME_Y - FRAME_PADDING,
+        right: FRAME_X - FRAME_PADDING,
         width: 20,
         height: 20,
         borderTopWidth: 3,
@@ -314,8 +240,8 @@ const styles = StyleSheet.create({
     },
     cornerBL: {
         position: 'absolute',
-        bottom: (Dimensions.get('window').height - FRAME_HEIGHT) / 2 - FRAME_PADDING,
-        left: (SCREEN_WIDTH - FRAME_WIDTH) / 2 - FRAME_PADDING,
+        bottom: FRAME_Y - FRAME_PADDING,
+        left: FRAME_X - FRAME_PADDING,
         width: 20,
         height: 20,
         borderBottomWidth: 3,
@@ -324,8 +250,8 @@ const styles = StyleSheet.create({
     },
     cornerBR: {
         position: 'absolute',
-        bottom: (Dimensions.get('window').height - FRAME_HEIGHT) / 2 - FRAME_PADDING,
-        right: (SCREEN_WIDTH - FRAME_WIDTH) / 2 - FRAME_PADDING,
+        bottom: FRAME_Y - FRAME_PADDING,
+        right: FRAME_X - FRAME_PADDING,
         width: 20,
         height: 20,
         borderBottomWidth: 3,
@@ -370,7 +296,7 @@ const styles = StyleSheet.create({
     preview: {
         flex: 1,
         margin: 20,
-        borderRadius: 12,
+        borderRadius: FRAME_SIZE / 2,
     },
     backButton: {
         flexDirection: 'row',

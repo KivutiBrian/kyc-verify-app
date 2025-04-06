@@ -15,6 +15,9 @@ export default function RootLayout() {
           <Stack.Screen name="country" />
           <Stack.Screen name="id-type" />
           <Stack.Screen name="instructions" />
+          <Stack.Screen name="selfie-instructions" />
+          <Stack.Screen name="selfie" />
+          <Stack.Screen name="success" />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

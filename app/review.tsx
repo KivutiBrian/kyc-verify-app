@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image, SafeAreaView, ActivityIndicator, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Check, X } from 'lucide-react-native';
 import { useVerification } from '@/context/VerificationContext';
@@ -33,32 +33,49 @@ export default function ReviewScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
+            <ScrollView style={styles.container}>
                 <View style={styles.content}>
-                    <Text style={styles.title}>Review Your ID Photos</Text>
+                    <Text style={styles.title}>Review Your Photos</Text>
                     <Text style={styles.subtitle}>
-                        Make sure both images are clear and all text is readable
+                        Make sure all images are clear and readable
                     </Text>
 
-                    <View style={styles.imageContainer}>
-                        <View style={styles.imageWrapper}>
-                            <Image source={{ uri: state.frontImage! }} style={styles.image} />
-                            <Text style={styles.imageLabel}>Front</Text>
-                            <TouchableOpacity
-                                style={styles.retakeButton}
-                                onPress={() => router.push('/instructions?side=front')}
-                            >
-                                <X size={16} color="#666" />
-                                <Text style={styles.retakeText}>Retake</Text>
-                            </TouchableOpacity>
-                        </View>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>ID Document</Text>
+                        <View style={styles.imageContainer}>
+                            <View style={styles.imageWrapper}>
+                                <Image source={{ uri: state.frontImage! }} style={styles.idImage} />
+                                <Text style={styles.imageLabel}>Front</Text>
+                                <TouchableOpacity
+                                    style={styles.retakeButton}
+                                    onPress={() => router.push('/instructions?side=front')}
+                                >
+                                    <X size={16} color="#666" />
+                                    <Text style={styles.retakeText}>Retake</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                        <View style={styles.imageWrapper}>
-                            <Image source={{ uri: state.backImage! }} style={styles.image} />
-                            <Text style={styles.imageLabel}>Back</Text>
+                            <View style={styles.imageWrapper}>
+                                <Image source={{ uri: state.backImage! }} style={styles.idImage} />
+                                <Text style={styles.imageLabel}>Back</Text>
+                                <TouchableOpacity
+                                    style={styles.retakeButton}
+                                    onPress={() => router.push('/instructions?side=back')}
+                                >
+                                    <X size={16} color="#666" />
+                                    <Text style={styles.retakeText}>Retake</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Selfie</Text>
+                        <View style={styles.selfieContainer}>
+                            <Image source={{ uri: state.selfieImage! }} style={styles.selfieImage} />
                             <TouchableOpacity
                                 style={styles.retakeButton}
-                                onPress={() => router.push('/instructions?side=back')}
+                                onPress={() => router.push('/selfie-instructions')}
                             >
                                 <X size={16} color="#666" />
                                 <Text style={styles.retakeText}>Retake</Text>
@@ -85,7 +102,7 @@ export default function ReviewScreen() {
                         </>
                     )}
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -113,6 +130,15 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 32,
     },
+    section: {
+        marginBottom: 32,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+        marginBottom: 16,
+    },
     imageContainer: {
         flexDirection: 'row',
         gap: 16,
@@ -131,9 +157,18 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
     },
-    image: {
+    idImage: {
         width: '100%',
         aspectRatio: 1.6,
+    },
+    selfieContainer: {
+        alignItems: 'center',
+    },
+    selfieImage: {
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        marginBottom: 8,
     },
     imageLabel: {
         fontSize: 14,
